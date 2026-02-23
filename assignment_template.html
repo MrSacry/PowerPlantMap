@@ -1,24 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Power Plant Map</title>
-    <script src="power-plants.js" defer></script>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Power Plants Map</title>
+    <link rel='stylesheet' href='https://unpkg.com/leaflet/dist/leaflet.css' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        h1 {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
-    <h1>Power Plants Map</h1>
-    <div id="map"></div>
+    <h1>US Power Plants Map</h1>
+    <div id='map'></div>
+    
+    <script src='https://unpkg.com/leaflet/dist/leaflet.js'></script>
+    <script src='power-plants.js'></script>
     <script>
-        try {
-            // assuming powerPlants is the variable we get from power-plants.js
-            if (typeof powerPlants === 'undefined') {
-                throw new Error('powerPlants is undefined');
-            }
-            console.log('Power plants data:', powerPlants);
-            // Code to initialize map with powerPlants data
-        } catch (error) {
-            console.error('Error loading power plants:', error);
+        // Initialize map
+        var map = L.map('map').setView([39.8283, -98.5795], 4);
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Add GeoJSON data to map
+        if (typeof plants !== 'undefined') {
+            L.geoJson(plants, {
+                pointToLayer: function(feature, latlng) {
+                    var capacity = feature.properties.capacity_mw;
+                    var radius = Math.sqrt(capacity / Math.PI) * 0.6;
+                    
+                    return L.circleMarker(latlng, {
+                        radius: radius,
+                        fillColor: '#ff7800',
+                        color: '#000',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    var props = feature.properties;
+                    var popup = '<b>' + props.plant_name + '</b><br>' +
+                                'Capacity: ' + props.capacity_mw + ' MW<br>' +
+                                'Fuel: ' + Object.keys(props.fuel_source).join(', ');
+                    layer.bindPopup(popup);
+                }
+            }).addTo(map);
+        } else {
+            console.error('Plants data not loaded');
         }
     </script>
 </body>
