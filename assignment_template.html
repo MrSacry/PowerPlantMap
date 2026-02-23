@@ -1,73 +1,142 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset='utf-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <meta charset=utf-8 />
     <title>Power Plants Map</title>
-    <link rel='stylesheet' href='https://unpkg.com/leaflet/dist/leaflet.css' />
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+
     <style>
         body {
             margin: 0;
             padding: 0;
+            background: whitesmoke;
+            font-family: Lato, sans-serif;
+            color: #0D0000;
         }
-        #map {
-            height: 100vh;
-            width: 100%;
+        header {
+            padding: 6px 10%;
         }
         h1 {
-            position: absolute;
-            top: 10px;
-            left: 50px;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 1000;
+            display: inline-block;
+            margin-right: 20px;
+            color: #001323;
+        }
+        h2 {
+            display: inline-block;
+            color: #001323;
+        }
+        #map {
+            width: 80%;
+            height: 540px;
+            margin: 10px auto;
+        }
+        footer {
+            padding: 6px 10%;
+            width: 80%;
+        }
+        p {
+            font-size: 1em;
+            color: #001323;
         }
     </style>
 </head>
+
 <body>
-    <h1>US Power Plants Map</h1>
+    <header>
+        <h1>Power Plants Map</h1>
+        <h2>Interactive Visualization</h2>
+    </header>
+
     <div id='map'></div>
-    
-    <script src='https://unpkg.com/leaflet/dist/leaflet.js'></script>
-    <script src='power-plants.js'></script>
+
+    <footer>
+        <p>Map authored by MrSacry</p>
+        <p>This map displays power plants across the United States with their capacity and fuel source information.</p>
+    </footer>
+
+    <script src="power-plants.js"></script>
     <script>
-        // Initialize map
-        var map = L.map('map').setView([39.8283, -98.5795], 4);
-        
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        
-        // Add GeoJSON data to map
-        if (typeof plants !== 'undefined') {
-            L.geoJson(plants, {
-                pointToLayer: function(feature, latlng) {
-                    var capacity = feature.properties.capacity_mw;
-                    var radius = Math.sqrt(capacity / Math.PI) * 0.6;
-                    
-                    return L.circleMarker(latlng, {
-                        radius: radius,
-                        fillColor: '#ff7800',
-                        color: '#000',
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                },
-                onEachFeature: function(feature, layer) {
-                    var props = feature.properties;
-                    var popup = '<b>' + props.plant_name + '</b><br>' +
-                                'Capacity: ' + props.capacity_mw + ' MW<br>' +
-                                'Fuel: ' + Object.keys(props.fuel_source).join(', ');
-                    layer.bindPopup(popup);
-                }
-            }).addTo(map);
-        } else {
-            console.error('Plants data not loaded');
-        }
+        // Wait for page to fully load before initializing map
+        window.addEventListener('load', function() {
+            // Check if plants data exists
+            if (typeof plants === 'undefined') {
+                console.error('plants variable is not defined');
+                return;
+            }
+
+            console.log('Plants data loaded, creating map...');
+
+            var map = L.map('map', {
+                center: [36, -94],
+                zoom: 4,
+            });
+            
+            var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            });  
+            
+            tiles.addTo(map);
+            
+            // Add the plants GeoJSON layer to map
+            if (plants && plants.features && plants.features.length > 0) {
+                L.geoJson(plants, {
+                    pointToLayer: function(feature, latlng) {
+                        var capacity = feature.properties.capacity_mw;
+                        var radius = Math.sqrt(capacity / Math.PI) * 0.6;
+                        
+                        return L.circleMarker(latlng, {
+                            color: '#FF6B6B',
+                            weight: 2,
+                            fillColor: '#FFD93D',
+                            fillOpacity: 0.7,
+                            radius: radius
+                        });   
+                    },
+                    onEachFeature: function(feature, layer) {
+                        var name = feature.properties.plant_name;
+                        var capacity = feature.properties.capacity_mw.toLocaleString();
+                        var fuelSource = feature.properties.fuel_source;
+                        
+                        var fuelText = '';
+                        for (var fuel in fuelSource) {
+                            if (fuelSource.hasOwnProperty(fuel)) {
+                                fuelText += fuel + ': ' + fuelSource[fuel] + ' MW<br>';
+                            }
+                        }
+                        
+                        var popup = '<b>' + name + '</b><br>' +
+                                    capacity + ' MW<br>' +
+                                    fuelText;
+                        layer.bindPopup(popup);
+                        
+                        layer.on('mouseover', function() {
+                            this.setStyle({
+                                fillColor: '#FF4444',
+                                weight: 3
+                            });
+                        });
+                        
+                        layer.on('mouseout', function() {
+                            this.setStyle({
+                                fillColor: '#FFD93D',
+                                weight: 2
+                            });
+                        });
+                    }
+                }).addTo(map);
+                console.log('Map created with ' + plants.features.length + ' power plants');
+            } else {
+                console.error('No features found in plants data');
+            }
+        });
     </script>
+    
 </body>
+
 </html>
