@@ -3,11 +3,11 @@
 
 <head>
     <meta charset=utf-8 />
-    <title>6</title>
+    <title>Power Plants Map</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
 
     <style>
@@ -48,15 +48,15 @@
 
 <body>
     <header>
-        <h1>Map Title</h1>
-        <h2>Map Subtitle</h2>
+        <h1>Power Plants Map</h1>
+        <h2>Interactive Visualization</h2>
     </header>
 
     <div id='map'></div>
 
     <footer>
-        <p>Map authored by YOUR NAME</p>
-        <p>Additional information about the data and map goes here.</p>
+        <p>Map authored by MrSacry</p>
+        <p>This map displays power plants across the United States with their capacity and fuel source information.</p>
     </footer>
 
     <script src="power-plants.js"></script>
@@ -74,69 +74,54 @@
       });  
       
       tiles.addTo(map);
-        
          
-    //step 2
-      
- //   plants.features.sort(function(a, b) {
-   // return b.properties.capacity_mw - a.properties.capacity_mw;
-//});
-    
-    //step 1    and then change to step 3 with 'return'
-      var Biomass = L.geoJson(plants, {
+      var powerPlantLayer = L.geoJson(plants, {
           pointToLayer: function(feature,latlng) {
-              console.log(feature.properties.fuel_source)
               return L.circleMarker(latlng, {
-                 color: 'orange',
+                 color: '#FF6B6B',
                  weight: 2,
-                 fillColor: 'yellow',
-                 fillOpacity: .5,
-                 radius: getRadius(feature.properties.capacity_mw) //step4
+                 fillColor: '#FFD93D',
+                 fillOpacity: .7,
+                 radius: getRadius(feature.properties.capacity_mw)
               });   
           },
           
-      filter : function(feature, layer){
-              if(feature.properties.fuel_source['Nuclear']){
-                  return feature
-              };
-             // console.log(feature);
-          },
-         
-    //step 5
-    onEachFeature : function(feature,layer) {
-    layer.on('mouseover', function() {
-    layer.setStyle({
-        fillColor: 'red'
-    });
-});
-layer.on('mouseout', function() {
-    layer.setStyle({
-        fillColor: 'yellow'
-    });
-});
+          onEachFeature : function(feature,layer) {
+              layer.on('mouseover', function() {
+                  layer.setStyle({
+                      fillColor: '#FF4444',
+                      weight: 3
+                  });
+              });
+              
+              layer.on('mouseout', function() {
+                  layer.setStyle({
+                      fillColor: '#FFD93D',
+                      weight: 2
+                  });
+              });
 
-
-          //step 6  
-          
-          var name = feature.properties.plant_name
-          var capacity = feature.properties.capacity_mw.toLocaleString()
-          var fuel = feature.properties.fuel_source
-      
-                                                
-          
-          var popup = ("<b>"+name+"</b><br>"
-              +capacity+ " MW" + "<br>")
-                       layer.bindPopup(popup)
+              var name = feature.properties.plant_name;
+              var capacity = feature.properties.capacity_mw.toLocaleString();
+              var fuelSource = feature.properties.fuel_source;
+              
+              var fuelText = '';
+              for (var fuel in fuelSource) {
+                  fuelText += fuel + ': ' + fuelSource[fuel] + ' MW<br>';
+              }
+              
+              var popup = ("<b>" + name + "</b><br>" +
+                  capacity + " MW<br>" +
+                  fuelText);
+              layer.bindPopup(popup);
           }
-          
-          
       }).addTo(map);
-//step 4
-        function getRadius(area){
-        var radius = Math.sqrt(area/Math.PI);
-        return radius *.6   
-    }
-          
+
+      function getRadius(area){
+          var radius = Math.sqrt(area/Math.PI);
+          return radius * 0.6;   
+      }
+           
     </script>
     
 </body>
