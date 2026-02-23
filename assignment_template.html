@@ -8,7 +8,10 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
-    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
 
     <style>
         body {
@@ -43,6 +46,144 @@
             font-size: 1em;
             color: #001323;
         }
+
+        /* Controls panel */
+        #controls {
+            width: 80%;
+            margin: 0 auto 10px;
+            background: white;
+            border-radius: 6px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+        }
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 10px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-group label {
+            font-weight: bold;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+        #search-input {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9em;
+            width: 200px;
+        }
+        #capacity-slider {
+            width: 150px;
+            cursor: pointer;
+        }
+        #capacity-value {
+            font-size: 0.85em;
+            color: #555;
+            min-width: 65px;
+        }
+        #reset-filters {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #f0f0f0;
+            font-family: Lato, sans-serif;
+            font-size: 0.9em;
+        }
+        #reset-filters:hover {
+            background: #e0e0e0;
+        }
+
+        /* Fuel filter buttons */
+        #fuel-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .fuel-btn {
+            padding: 4px 10px;
+            border: 2px solid;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-family: Lato, sans-serif;
+            transition: all 0.2s;
+        }
+        .fuel-btn:hover {
+            opacity: 0.8;
+        }
+
+        /* Stats panel */
+        #stats {
+            width: 80%;
+            margin: 0 auto 10px;
+            background: white;
+            border-radius: 6px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-sizing: border-box;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 10px 16px;
+            text-align: center;
+            min-width: 120px;
+            flex: 1;
+        }
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #001323;
+        }
+        .stat-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* Legend (Leaflet custom control) */
+        .legend {
+            background: white;
+            padding: 10px 14px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            line-height: 1.7;
+            font-size: 0.82em;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .legend h4 {
+            margin: 0 0 6px 0;
+            font-size: 1em;
+            color: #001323;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 
@@ -52,7 +193,49 @@
         <h2>Interactive Visualization</h2>
     </header>
 
+    <!-- Controls panel -->
+    <div id="controls">
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="search-input">&#128269; Search:</label>
+                <input type="text" id="search-input" placeholder="Search plant name...">
+            </div>
+            <div class="control-group">
+                <label for="capacity-slider">&#9889; Min Capacity:</label>
+                <input type="range" id="capacity-slider" min="0" max="8000" step="100" value="0">
+                <span id="capacity-value">0 MW</span>
+            </div>
+            <div class="control-group">
+                <button id="reset-filters">Reset Filters</button>
+            </div>
+        </div>
+        <div>
+            <strong style="font-size:0.9em;">Fuel Types (click to toggle):</strong>
+            <div id="fuel-filters"></div>
+        </div>
+    </div>
+
     <div id='map'></div>
+
+    <!-- Summary statistics panel -->
+    <div id="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="stat-total">-</div>
+            <div class="stat-label">Plants Shown</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-capacity">-</div>
+            <div class="stat-label">Total Capacity (MW)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-avg">-</div>
+            <div class="stat-label">Avg Capacity (MW)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-fuel-count">-</div>
+            <div class="stat-label">Fuel Types Shown</div>
+        </div>
+    </div>
 
     <footer>
         <p>Map authored by MrSacry</p>
@@ -61,82 +244,255 @@
 
     <script src="power-plants.js"></script>
     <script>
-        // Wait for page to fully load before initializing map
         window.addEventListener('load', function() {
-            // Check if plants data exists
             if (typeof plants === 'undefined') {
                 console.error('plants variable is not defined');
                 return;
             }
 
-            console.log('Plants data loaded, creating map...');
-
             var map = L.map('map', {
                 center: [36, -94],
-                zoom: 4,
+                zoom: 4
             });
-            
+
             var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 maxZoom: 19
-            });  
-            
+            });
             tiles.addTo(map);
-            
-            // Add the plants GeoJSON layer to map
-            if (plants && plants.features && plants.features.length > 0) {
-                L.geoJson(plants, {
-                    pointToLayer: function(feature, latlng) {
-                        var capacity = feature.properties.capacity_mw;
-                        var radius = Math.sqrt(capacity / Math.PI) * 0.6;
-                        
-                        return L.circleMarker(latlng, {
-                            color: '#FF6B6B',
-                            weight: 2,
-                            fillColor: '#FFD93D',
-                            fillOpacity: 0.7,
-                            radius: radius
-                        });   
-                    },
-                    onEachFeature: function(feature, layer) {
-                        var name = feature.properties.plant_name;
-                        var capacity = feature.properties.capacity_mw.toLocaleString();
-                        var fuelSource = feature.properties.fuel_source;
-                        
-                        var fuelText = '';
-                        for (var fuel in fuelSource) {
-                            if (fuelSource.hasOwnProperty(fuel)) {
-                                fuelText += fuel + ': ' + fuelSource[fuel] + ' MW<br>';
-                            }
-                        }
-                        
-                        var popup = '<b>' + name + '</b><br>' +
-                                    capacity + ' MW<br>' +
-                                    fuelText;
-                        layer.bindPopup(popup);
-                        
-                        layer.on('mouseover', function() {
-                            this.setStyle({
-                                fillColor: '#FF4444',
-                                weight: 3
-                            });
-                        });
-                        
-                        layer.on('mouseout', function() {
-                            this.setStyle({
-                                fillColor: '#FFD93D',
-                                weight: 2
-                            });
-                        });
-                    }
-                }).addTo(map);
-                console.log('Map created with ' + plants.features.length + ' power plants');
-            } else {
-                console.error('No features found in plants data');
+
+            // Color map for fuel types
+            var fuelColors = {
+                'Hydro':               '#4FC3F7',
+                'Coal':                '#795548',
+                'Natural Gas':         '#FF9800',
+                'Petroleum':           '#9C27B0',
+                'Nuclear':             '#F44336',
+                'Wind':                '#8BC34A',
+                'Pumped Storage':      '#03A9F4',
+                'Solar':               '#FDD835',
+                'Geothermal':          '#FF5722',
+                'Biomass':             '#4CAF50',
+                'Wood':                '#6D4C41',
+                'Other':               '#9E9E9E',
+                'Other Fossil Gasses': '#607D8B'
+            };
+
+            var allFuelTypes = Object.keys(fuelColors);
+
+            function getFuelColor(fuel) {
+                return fuelColors[fuel] || fuelColors['Other'];
             }
+
+            function getPrimaryFuel(fuelSource) {
+                var maxMW = -1;
+                var primary = 'Other';
+                for (var fuel in fuelSource) {
+                    if (fuelSource.hasOwnProperty(fuel) && fuelSource[fuel] > maxMW) {
+                        maxMW = fuelSource[fuel];
+                        primary = fuel;
+                    }
+                }
+                return primary;
+            }
+
+            // Marker sizing constants
+            var MIN_MARKER_RADIUS = 4;   // minimum circle radius in pixels
+            var MAX_MARKER_RADIUS = 20;  // maximum circle radius in pixels
+            var RADIUS_SCALE = 0.6;      // scale factor applied to sqrt(capacity/pi)
+            var CLUSTER_RADIUS = 60;     // max pixel radius for grouping markers into clusters
+
+            // Create one MarkerClusterGroup per fuel type
+            var clusterGroups = {};
+            allFuelTypes.forEach(function(fuel) {
+                clusterGroups[fuel] = L.markerClusterGroup({
+                    maxClusterRadius: CLUSTER_RADIUS,
+                    showCoverageOnHover: false
+                });
+                clusterGroups[fuel].addTo(map);
+            });
+
+            // Build marker metadata array for filtering
+            var allMarkers = [];
+            plants.features.forEach(function(feature) {
+                var props = feature.properties;
+                var coords = feature.geometry.coordinates;
+                var capacity = props.capacity_mw || 0;
+                var primaryFuel = getPrimaryFuel(props.fuel_source);
+                var color = getFuelColor(primaryFuel);
+                var radius = Math.min(Math.max(MIN_MARKER_RADIUS, Math.sqrt(capacity / Math.PI) * RADIUS_SCALE), MAX_MARKER_RADIUS);
+
+                var marker = L.circleMarker(L.latLng(coords[1], coords[0]), {
+                    color: color,
+                    weight: 1.5,
+                    fillColor: color,
+                    fillOpacity: 0.7,
+                    radius: radius
+                });
+
+                // Build popup content
+                var fuelText = '';
+                for (var f in props.fuel_source) {
+                    if (props.fuel_source.hasOwnProperty(f)) {
+                        fuelText += f + ': ' + props.fuel_source[f] + ' MW<br>';
+                    }
+                }
+                marker.bindPopup(
+                    '<b>' + props.plant_name + '</b><br>' +
+                    'Total: ' + capacity.toLocaleString() + ' MW<br>' +
+                    '<i>Primary: ' + primaryFuel + '</i><br>' +
+                    fuelText
+                );
+
+                // Hover effects
+                marker.on('mouseover', function() {
+                    this.setStyle({ weight: 3, fillOpacity: 0.95 });
+                    this.bringToFront();
+                });
+                marker.on('mouseout', function() {
+                    this.setStyle({ weight: 1.5, fillOpacity: 0.7 });
+                });
+
+                var group = clusterGroups[primaryFuel] || clusterGroups['Other'];
+                group.addLayer(marker);
+
+                allMarkers.push({
+                    marker: marker,
+                    capacity: capacity,
+                    nameLower: props.plant_name.toLowerCase(),
+                    primaryFuel: primaryFuel,
+                    group: group
+                });
+            });
+
+            // --- Legend ---
+            var legend = L.control({ position: 'bottomright' });
+            legend.onAdd = function() {
+                var div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = '<h4>Fuel Type</h4>';
+                allFuelTypes.forEach(function(fuel) {
+                    div.innerHTML +=
+                        '<div class="legend-item">' +
+                        '<span class="legend-dot" style="background:' + getFuelColor(fuel) + '"></span>' +
+                        fuel + '</div>';
+                });
+                return div;
+            };
+            legend.addTo(map);
+
+            // --- Layer controls (Leaflet built-in) ---
+            var overlays = {};
+            allFuelTypes.forEach(function(fuel) {
+                overlays[fuel] = clusterGroups[fuel];
+            });
+            L.control.layers(null, overlays, { collapsed: true, position: 'topright' }).addTo(map);
+
+            // --- Fuel filter buttons ---
+            var activeFuels = new Set(allFuelTypes);
+            var fuelBtns = {};
+            var filtersDiv = document.getElementById('fuel-filters');
+
+            allFuelTypes.forEach(function(fuel) {
+                var btn = document.createElement('button');
+                var color = getFuelColor(fuel);
+                btn.className = 'fuel-btn';
+                btn.textContent = fuel;
+                btn.style.borderColor = color;
+                btn.style.color = '#fff';
+                btn.style.backgroundColor = color;
+                fuelBtns[fuel] = btn;
+
+                btn.addEventListener('click', function() {
+                    if (activeFuels.has(fuel)) {
+                        activeFuels.delete(fuel);
+                        btn.style.backgroundColor = 'white';
+                        btn.style.color = color;
+                    } else {
+                        activeFuels.add(fuel);
+                        btn.style.backgroundColor = color;
+                        btn.style.color = '#fff';
+                    }
+                    applyFilters();
+                });
+                filtersDiv.appendChild(btn);
+            });
+
+            // --- Capacity slider ---
+            var minCapacity = 0;
+            var slider = document.getElementById('capacity-slider');
+            var capacityValueEl = document.getElementById('capacity-value');
+            slider.addEventListener('input', function() {
+                minCapacity = parseInt(this.value, 10);
+                capacityValueEl.textContent = minCapacity.toLocaleString() + ' MW';
+                applyFilters();
+            });
+
+            // --- Search ---
+            var searchText = '';
+            var searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', function() {
+                searchText = this.value.toLowerCase();
+                applyFilters();
+            });
+
+            // --- Reset button ---
+            document.getElementById('reset-filters').addEventListener('click', function() {
+                activeFuels = new Set(allFuelTypes);
+                allFuelTypes.forEach(function(fuel) {
+                    var color = getFuelColor(fuel);
+                    fuelBtns[fuel].style.backgroundColor = color;
+                    fuelBtns[fuel].style.color = '#fff';
+                });
+                minCapacity = 0;
+                slider.value = 0;
+                capacityValueEl.textContent = '0 MW';
+                searchText = '';
+                searchInput.value = '';
+                applyFilters();
+            });
+
+            // --- Apply filters ---
+            function applyFilters() {
+                // Clear all cluster groups
+                allFuelTypes.forEach(function(fuel) {
+                    clusterGroups[fuel].clearLayers();
+                });
+
+                var visibleCount = 0;
+                var totalCapacity = 0;
+                var visibleFuels = new Set();
+
+                allMarkers.forEach(function(item) {
+                    var visible =
+                        activeFuels.has(item.primaryFuel) &&
+                        item.capacity >= minCapacity &&
+                        (searchText === '' || item.nameLower.indexOf(searchText) !== -1);
+
+                    if (visible) {
+                        item.group.addLayer(item.marker);
+                        visibleCount++;
+                        totalCapacity += item.capacity;
+                        visibleFuels.add(item.primaryFuel);
+                    }
+                });
+
+                updateStats(visibleCount, totalCapacity, visibleFuels.size);
+            }
+
+            function updateStats(count, totalCap, fuelCount) {
+                document.getElementById('stat-total').textContent = count.toLocaleString();
+                document.getElementById('stat-capacity').textContent = Math.round(totalCap).toLocaleString();
+                document.getElementById('stat-avg').textContent = count > 0
+                    ? Math.round(totalCap / count).toLocaleString() : '0';
+                document.getElementById('stat-fuel-count').textContent = fuelCount;
+            }
+
+            // Initial render
+            applyFilters();
+            console.log('Map created with ' + plants.features.length + ' power plants');
         });
     </script>
-    
+
 </body>
 
 </html>
